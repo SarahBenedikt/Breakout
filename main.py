@@ -41,6 +41,7 @@ ball_speed = 5
 ball_moving = False
 score = 0
 lives = 3
+game_over = False
 
 def reset_ball():
     ball_rect.center = (paddle_rect.midtop)
@@ -117,6 +118,17 @@ def draw_lives():
         screen.blit(heart_surf, (heart_x, heart_y))
 
 
+def display_game_over_message():
+    """Displays 'GAME OVER' message."""
+    game_over_text = font.render('GAME OVER', True, (99, 155, 255))
+    game_over_rect = game_over_text.get_rect(center=(400, 250))  # Centered on the screen
+    screen.blit(game_over_text, game_over_rect)
+
+    score_text = font.render(f'SCORE: {score}', True, (99, 155, 255))
+    score_rect = score_text.get_rect(center=(400, 350))  # Centered below Game Over
+    screen.blit(score_text, score_rect)
+
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -126,6 +138,17 @@ while True:
             if event.key == pygame.K_SPACE and not ball_moving:
                 ball_velocity = [ball_speed, -ball_speed]
                 ball_moving = True
+
+    if lives == 0 and not game_over:
+        game_over = True
+
+    if game_over:
+        # Clear screen and display the 'Game Over' message
+        screen.fill((0, 0, 0))  # Clear screen
+        display_game_over_message()  # Display the game over message
+        pygame.display.update()
+        clock.tick(60)
+        continue
 
     move_paddle()
 
