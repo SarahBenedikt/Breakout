@@ -24,7 +24,6 @@ heart_surf = pygame.image.load('graphics/heart.png').convert_alpha()
 heart_surf = pygame.transform.rotozoom(heart_surf, 0, 0.9)
 heart_rect = heart_surf.get_rect(center=(600, 40))
 
-
 # Load brick graphics
 brick_colors = ['dark', 'green', 'orange', 'purple', 'yellow', 'red']
 bricks = {}
@@ -33,6 +32,13 @@ for color in brick_colors:
     brick_surf = pygame.transform.rotozoom(brick_surf, 0, 1.5)
     bricks[color] = brick_surf
 
+# Create a list of brick rects (Grid)
+brick_width = bricks['red'].get_width()
+brick_height = bricks['red'].get_height()
+brick_rows = 8
+brick_cols = 15
+brick_padding = 5
+brick_grid = []
 
 # Game variables
 paddle_speed = 10
@@ -41,16 +47,19 @@ ball_speed = 5
 ball_moving = False
 score = 0
 lives = 3
+level = 1
 game_over = False
 
+
 def reset_ball():
-    ball_rect.center = (paddle_rect.midtop)
+    """Reset ball position and velocity."""
+    ball_rect.center = paddle_rect.midtop
     ball_velocity[0] = 0
     ball_velocity[1] = 0
 
-reset_ball()
 
 def move_paddle():
+    """Moves the paddle left and right when keys are pressed."""
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
         paddle_rect.x -= paddle_speed
@@ -58,7 +67,9 @@ def move_paddle():
         paddle_rect.x += paddle_speed
     paddle_rect.clamp_ip(screen.get_rect())
 
+
 def move_ball():
+    """Moves ball and handles life loss."""
     global ball_moving, lives
     ball_rect.x += ball_velocity[0]
     ball_rect.y += ball_velocity[1]
@@ -73,10 +84,12 @@ def move_ball():
 
     if ball_rect.bottom >= 600:
         ball_moving = False
-        lives -=1
+        lives -= 1
         reset_ball()
 
+
 def check_ball_brick_collision():
+    """Checks collision with bricks."""
     global ball_velocity, score, text_surf
     for brick_row in brick_grid:
         for brick in brick_row:
@@ -92,23 +105,19 @@ def check_ball_brick_collision():
                 return  # Exit after first collision to prevent multiple hits in one frame
 
 
-# Create a list of brick rects
-brick_width = bricks['red'].get_width()
-brick_height = bricks['red'].get_height()
-brick_rows = 8
-brick_cols = 15
-brick_padding = 5
-brick_grid = []
+def create_brick_grid():
+    """Creates a new grid of bricks for the current level."""
+    brick_grid.clear()  # Clear existing bricks
+    for row in range(brick_rows):
+        brick_row = []
+        for col in range(brick_cols):
+            brick_x = col * (brick_width + brick_padding)
+            brick_y = row * (brick_height + brick_padding) + 70
+            brick_type = random.choice(brick_colors)
+            brick_rect = bricks[brick_type].get_rect(topleft=(brick_x, brick_y))
+            brick_row.append((brick_type, brick_rect))
+        brick_grid.append(brick_row)
 
-for row in range(brick_rows):
-    brick_row = []
-    for col in range(brick_cols):
-        brick_x = col * (brick_width + brick_padding)
-        brick_y = row * (brick_height + brick_padding) + 70
-        brick_type = random.choice(brick_colors)
-        brick_rect = bricks[brick_type].get_rect(topleft=(brick_x, brick_y))
-        brick_row.append((brick_type, brick_rect))
-    brick_grid.append(brick_row)
 
 def draw_lives():
     """Draws the remaining lives (hearts) on the screen."""
@@ -129,6 +138,7 @@ def display_game_over_message():
     screen.blit(score_text, score_rect)
 
 
+# Game loop
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -139,7 +149,15 @@ while True:
                 ball_velocity = [ball_speed, -ball_speed]
                 ball_moving = True
 
-    if lives == 0 and not game_over:
+    move_paddle()
+
+    if not ball_moving:
+        reset_ball()
+    else:
+        move_ball()
+        check_ball_brick_collision()
+
+    if lives == 0:
         game_over = True
 
     if game_over:
@@ -150,13 +168,13 @@ while True:
         clock.tick(60)
         continue
 
-    move_paddle()
-
-    if not ball_moving:
-        ball_rect.center = paddle_rect.midtop
-    else:
-        move_ball()
-        check_ball_brick_collision()
+    if all(brick_rect.bottom < 0 for brick_row in brick_grid for _, brick_rect in brick_row):
+        # If all bricks are cleared, start a new level
+        level += 1
+        ball_speed += 1  # Increase the ball speed
+        reset_ball()  # Reset ball position and speed
+        ball_moving = False
+        create_brick_grid()  # Create new bricks for the next level
 
     screen.blit(background_surf, (0, 0))
     screen.blit(paddle_surf, paddle_rect)
